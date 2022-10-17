@@ -12,13 +12,13 @@ RUN wget https://github.com/SoftEtherVPN/SoftEtherVPN_Stable/archive/v${BUILD_VE
     && tar -x -C /usr/local/src/ -f v${BUILD_VERSION}.tar.gz \
     && rm v${BUILD_VERSION}.tar.gz
 
-FROM centos:8 as build
+FROM alpine:3.14 as build
 
 COPY --from=prep /usr/local/src /usr/local/src
 
-RUN yum -y update \
-    && yum -y groupinstall "Development Tools" \
-    && yum -y install ncurses-devel openssl-devel readline-devel \
+ENV LANG=en_US.UTF-8
+
+RUN apk add -U build-base ncurses-dev openssl-dev readline-dev zip zlib-dev \
     && cd /usr/local/src/SoftEtherVPN_Stable-* \
     && ./configure \
     && make \
@@ -26,15 +26,15 @@ RUN yum -y update \
     && touch /usr/vpnserver/vpn_server.config \
     && zip -r9 /artifacts.zip /usr/vpn* /usr/bin/vpn*
 
-FROM centos:8
+FROM alpine:3.14
 
 COPY --from=build /artifacts.zip /
 
 COPY copyables /
 
-RUN yum -y update \
-    && yum -y install unzip iptables \
-    && rm -rf /var/log/* /var/cache/yum/* /var/lib/yum/* \
+ENV LANG=en_US.UTF-8
+
+RUN apk add -U --no-cache bash iptables openssl-dev \
     && chmod +x /entrypoint.sh /gencert.sh \
     && unzip -o /artifacts.zip -d / \
     && rm /artifacts.zip \
